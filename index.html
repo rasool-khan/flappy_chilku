@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Flappy Face</title>
+  <title>Flappy Chilku</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -40,7 +40,7 @@
   </div>
 
   <script>
-    const canvas = document.getElementById('z');
+    const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
     const birdImg = new Image();
@@ -293,7 +293,7 @@
         ctx.font = "bold 28px Arial";
         ctx.fillText("Flappy Chilku", canvas.width / 2, 220);
         ctx.font = "bold 20px Arial";
-        ctx.fillText("Click or press Space to start", canvas.width / 2, 258);
+        ctx.fillText("Click to fly", canvas.width / 2, 258);
       }
 
       if (gameOver) {
@@ -303,6 +303,7 @@
         ctx.fillText("Game Over", canvas.width / 2, 235);
         ctx.font = "bold 22px Arial";
         ctx.fillText(`Score: ${score}`, canvas.width / 2, 273);
+        ctx.fillText("Try again", canvas.width / 2, 313);
       }
     }
 
