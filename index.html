@@ -172,12 +172,12 @@
         <ol class="leaderboard" id="personalBestList">
           <li class="leaderboard-empty">Waiting for scores...</li>
         </ol>
-        <p class="setup-note">Add your Firebase config in `firebase-config.js` to make the live leaderboard work.</p>
+        <p class="setup-note">Add your Firebase config in `firebase-config.public.js` to make the live leaderboard work.</p>
       </section>
     </aside>
   </div>
 
-  <script src="./firebase-config.js"></script>
+  <script src="./firebase-config.public.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
   <script>
@@ -345,7 +345,7 @@
 
     function initLeaderboard() {
       if (!window.firebase || !hasFirebaseConfig()) {
-        setStatus("Firebase config missing. Add it in firebase-config.js to enable live scores.");
+        setStatus("Firebase config missing. Add it in firebase-config.public.js to enable live scores.");
         renderLeaderboardInto(leaderboardList, [], "No scores yet. Be the first.");
         renderLeaderboardInto(personalBestList, [], "No personal bests yet.");
         return;

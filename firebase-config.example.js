@@ -9,5 +9,6 @@ window.FLAPPY_CHILKU_CONFIG = {
     appId: "PASTE_YOUR_APP_ID",
     measurementId: "PASTE_YOUR_MEASUREMENT_ID"
   },
-  path: "leaderboard"
+  path: "leaderboard",
+  uniquePath: "leaderboardBestByPlayer"
 };
