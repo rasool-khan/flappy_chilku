@@ -201,11 +201,13 @@
         appId: "PASTE_YOUR_APP_ID",
         measurementId: "PASTE_YOUR_MEASUREMENT_ID"
       },
-      path: "leaderboard"
+      path: "leaderboard",
+      uniquePath: "leaderboardBestByPlayer"
     };
 
     let firebaseDb = null;
     let leaderboardRef = null;
+    let uniqueLeaderboardRef = null;
     let leaderboardReady = false;
     let playerName = (localStorage.getItem("customFlappyUsername") || "").trim();
 
@@ -330,19 +332,8 @@
       }).join("");
     }
 
-    function buildUniqueHighScores(entries) {
-      const bestByUsername = new Map();
-
-      for (const entry of entries) {
-        const existing = bestByUsername.get(entry.username);
-        if (!existing || entry.score > existing.score || (entry.score === existing.score && entry.timestamp < existing.timestamp)) {
-          bestByUsername.set(entry.username, entry);
-        }
-      }
-
-      return Array.from(bestByUsername.values())
-        .sort((a, b) => b.score - a.score || a.timestamp - b.timestamp)
-        .slice(0, 10);
+    function buildUniqueLeaderboardKey(username) {
+      return username.toLowerCase().replace(/[.$#[\]/]/g, "_");
     }
 
     function hasFirebaseConfig() {
@@ -366,10 +357,14 @@
         }
         firebaseDb = firebase.database();
         leaderboardRef = firebaseDb.ref(leaderboardConfig.path);
+        uniqueLeaderboardRef = firebaseDb.ref(leaderboardConfig.uniquePath || `${leaderboardConfig.path}BestByPlayer`);
         leaderboardReady = true;
         setStatus(playerName ? "Connected. Your scores will sync live." : "Connected. Save a username to join.");
 
-        leaderboardRef.on("value", (snapshot) => {
+        leaderboardRef
+          .orderByChild("score")
+          .limitToLast(10)
+          .on("value", (snapshot) => {
             const entries = [];
             snapshot.forEach((child) => {
               const value = child.val() || {};
@@ -384,9 +379,30 @@
 
             entries.sort((a, b) => b.score - a.score || a.timestamp - b.timestamp);
             renderLeaderboardInto(leaderboardList, entries.slice(0, 10), "No scores yet. Be the first.");
-            renderLeaderboardInto(personalBestList, buildUniqueHighScores(entries), "No personal bests yet.");
           }, () => {
             setStatus("Could not read leaderboard data. Check your database rules.", true);
+          });
+
+        uniqueLeaderboardRef
+          .orderByChild("score")
+          .limitToLast(10)
+          .on("value", (snapshot) => {
+            const entries = [];
+            snapshot.forEach((child) => {
+              const value = child.val() || {};
+              if (typeof value.username === "string" && typeof value.score === "number") {
+                entries.push({
+                  username: sanitizeUsername(value.username) || "Anonymous",
+                  score: value.score,
+                  timestamp: Number(value.timestamp || 0)
+                });
+              }
+            });
+
+            entries.sort((a, b) => b.score - a.score || a.timestamp - b.timestamp);
+            renderLeaderboardInto(personalBestList, entries.slice(0, 10), "No personal bests yet.");
+          }, () => {
+            renderLeaderboardInto(personalBestList, [], "No personal bests yet.");
           });
       } catch (error) {
         setStatus("Firebase failed to initialize. Check the config values.", true);
@@ -428,6 +444,22 @@
       }).catch(() => {
         setStatus("Could not submit your score. Check your Firebase write rules.", true);
       });
+
+      if (uniqueLeaderboardRef) {
+        const uniqueKey = buildUniqueLeaderboardKey(playerName);
+        uniqueLeaderboardRef.child(uniqueKey).transaction((currentValue) => {
+          if (!currentValue || typeof currentValue.score !== "number" || finalScore > currentValue.score) {
+            return {
+              username: playerName,
+              score: finalScore,
+              timestamp: Date.now()
+            };
+          }
+          return currentValue;
+        }).catch(() => {
+          setStatus("Score saved, but personal best leaderboard could not update.", true);
+        });
+      }
     }
 
     function flap() {
