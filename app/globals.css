@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0F1F0F;
+  --foreground: #D4E8C4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-pixel: var(--font-pixel);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(91,168,41,0.04) 3px,
+      rgba(91,168,41,0.04) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 3px,
+      rgba(91,168,41,0.04) 3px,
+      rgba(91,168,41,0.04) 4px
+    ),
+    linear-gradient(180deg, #0A1A0A 0%, #152815 40%, #1A3018 70%, #0F1F0F 100%);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  overscroll-behavior: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
