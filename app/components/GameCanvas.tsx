@@ -6,9 +6,9 @@ import { useRef, useEffect, useCallback } from "react";
 const GROUND_H = 90;
 const PIPE_W = 72;
 const PIPE_GAP = 165;
-const PIPE_SPACING = 250;
-const PIPE_SPEED = 4.2;
-const GRAVITY = 0.52;
+const PIPE_SPACING = 220;
+const PIPE_SPEED = 2.6;
+const GRAVITY = 0.42;
 const FLAP_STR = -7.2;
 
 const CANVAS_W = 420;
