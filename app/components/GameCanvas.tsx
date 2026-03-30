@@ -628,8 +628,8 @@ export default function GameCanvas({
           if (pipe.x + PIPE_W < 0) s.pipes.splice(i, 1);
         }
 
-        // Tighten spacing slightly as speed increases so gap stays fair
-        const dynSpacing = Math.max(PIPE_SPACING - s.score * 1.5, 160);
+        // Widen spacing as speed increases so there's always room to navigate
+        const dynSpacing = Math.min(PIPE_SPACING + s.score * 2.5, 420);
         if (s.pipes.length && s.pipes[s.pipes.length - 1].x < CANVAS_W - dynSpacing) {
           createPipe(CANVAS_W + 40);
         }
