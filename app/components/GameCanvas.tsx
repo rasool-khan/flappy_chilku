@@ -3,14 +3,13 @@
 import { useRef, useEffect, useCallback } from "react";
 
 /* ── constants ──────────────────────────────────────────────── */
-const GROUND_H = 72;
-const PIPE_W = 64;
-const PIPE_GAP = 175;
-const PIPE_SPACING = 260;
-const PIPE_SPEED = 3.6;
-const GRAVITY = 0.38;
-const FLAP_STR = -6.4;
-const TERMINAL_VEL = 8;
+const GROUND_H = 90;
+const PIPE_W = 72;
+const PIPE_GAP = 165;
+const PIPE_SPACING = 250;
+const PIPE_SPEED = 4.2;
+const GRAVITY = 0.52;
+const FLAP_STR = -7.2;
 
 const CANVAS_W = 420;
 const CANVAS_H = 640;
@@ -71,8 +70,8 @@ export default function GameCanvas({
 
   /* ── helpers ─────────────────────────────────────────────── */
   const createPipe = useCallback((x: number) => {
-    const minTop = 90;
-    const maxTop = CANVAS_H - GROUND_H - PIPE_GAP - 90;
+    const minTop = 80;
+    const maxTop = CANVAS_H - GROUND_H - PIPE_GAP - 120;
     const topHeight = Math.random() * (maxTop - minTop) + minTop;
     stateRef.current.pipes.push({ x, topHeight, passed: false });
   }, []);
@@ -83,7 +82,7 @@ export default function GameCanvas({
     s.gameOver = false;
     s.score = 0;
     s.frame = 0;
-    s.bird = { x: 95, y: 260, width: 76, height: 76, velocity: 0, rotation: 0 };
+    s.bird = { x: 95, y: 240, width: 76, height: 76, velocity: 0, rotation: 0 };
     s.pipes = [];
     createPipe(CANVAS_W + 120);
     createPipe(CANVAS_W + 120 + PIPE_SPACING);
@@ -289,70 +288,61 @@ export default function GameCanvas({
       const botY = topH + PIPE_GAP;
       const botH = CANVAS_H - GROUND_H - botY;
       const pw = PIPE_W;
-      const lipH = 26;
-      const lipExtra = 6;
-      const px = 4; // pixel block column width
+      const lipH = 28;
+      const lipOvr = 8; // lip overhang on each side
+      const hlW = 10;   // highlight strip width (left)
+      const shW = 8;    // shadow strip width (right)
 
-      // ── Top pipe body — flat blocky shading ──
-      ctx.fillStyle = "#5EAA2B";
-      ctx.fillRect(x, 0, pw, topH - lipH);
-      // Left highlight columns
-      ctx.fillStyle = "#7FCC3C";
-      ctx.fillRect(x, 0, px, topH - lipH);
-      ctx.fillStyle = "#6BBD30";
-      ctx.fillRect(x + px, 0, px, topH - lipH);
-      // Right shadow columns
-      ctx.fillStyle = "#4B8F22";
-      ctx.fillRect(x + pw - px * 2, 0, px, topH - lipH);
-      ctx.fillStyle = "#3D7A1A";
-      ctx.fillRect(x + pw - px, 0, px, topH - lipH);
+      // Pipe color palette
+      const cBody = "#3E9E23";     // base body color
+      const cHL   = "#6DC838";     // left highlight strip
+      const cSH   = "#296B13";     // right shadow strip
+      const cLip  = "#4DB52B";     // lip base (slightly brighter)
+      const cLipHL = "#80E040";    // lip highlight (top row + left col)
+      const cLipSH = "#256010";    // lip shadow (bottom row + right col)
+      const cDark  = "#172D09";    // dark border around lip
 
-      // ── Top pipe lip ──
-      ctx.fillStyle = "#5EAA2B";
-      ctx.fillRect(x - lipExtra, topH - lipH, pw + lipExtra * 2, lipH);
-      // Lip highlight top edge
-      ctx.fillStyle = "#7FCC3C";
-      ctx.fillRect(x - lipExtra, topH - lipH, pw + lipExtra * 2, px);
-      // Lip left highlight
-      ctx.fillStyle = "#7FCC3C";
-      ctx.fillRect(x - lipExtra, topH - lipH, px, lipH);
-      // Lip shadow bottom edge
-      ctx.fillStyle = "#3D7A1A";
-      ctx.fillRect(x - lipExtra, topH - px, pw + lipExtra * 2, px);
-      // Lip right shadow
-      ctx.fillStyle = "#3D7A1A";
-      ctx.fillRect(x - lipExtra + pw + lipExtra * 2 - px, topH - lipH, px, lipH);
-      // 1px dark outline
-      ctx.strokeStyle = "#2D5016";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x - lipExtra, topH - lipH, pw + lipExtra * 2, lipH);
+      // Helper: draw a pipe body segment (with left/right bevel strips)
+      const seg = (sx: number, sy: number, sw: number, sh: number) => {
+        ctx.fillStyle = cBody;
+        ctx.fillRect(sx, sy, sw, sh);
+        ctx.fillStyle = cHL;
+        ctx.fillRect(sx, sy, hlW, sh);
+        ctx.fillStyle = cSH;
+        ctx.fillRect(sx + sw - shW, sy, shW, sh);
+      };
 
-      // ── Bottom pipe body ──
-      ctx.fillStyle = "#5EAA2B";
-      ctx.fillRect(x, botY + lipH, pw, botH - lipH + 4);
-      ctx.fillStyle = "#7FCC3C";
-      ctx.fillRect(x, botY + lipH, px, botH - lipH);
-      ctx.fillStyle = "#6BBD30";
-      ctx.fillRect(x + px, botY + lipH, px, botH - lipH);
-      ctx.fillStyle = "#4B8F22";
-      ctx.fillRect(x + pw - px * 2, botY + lipH, px, botH - lipH);
-      ctx.fillStyle = "#3D7A1A";
-      ctx.fillRect(x + pw - px, botY + lipH, px, botH - lipH);
+      // Helper: draw a pipe lip with beveled edges and dark border
+      const lip = (lx: number, ly: number, lw: number, lh: number) => {
+        ctx.fillStyle = cLip;
+        ctx.fillRect(lx, ly, lw, lh);
+        // top highlight row
+        ctx.fillStyle = cLipHL;
+        ctx.fillRect(lx, ly, lw, 4);
+        // left highlight column
+        ctx.fillRect(lx, ly, hlW, lh);
+        // bottom shadow row
+        ctx.fillStyle = cLipSH;
+        ctx.fillRect(lx, ly + lh - 5, lw, 5);
+        // right shadow column
+        ctx.fillRect(lx + lw - shW, ly, shW, lh);
+        // dark 2px border: top, bottom, left, right
+        ctx.fillStyle = cDark;
+        ctx.fillRect(lx, ly, lw, 2);
+        ctx.fillRect(lx, ly + lh - 2, lw, 2);
+        ctx.fillRect(lx, ly, 2, lh);
+        ctx.fillRect(lx + lw - 2, ly, 2, lh);
+      };
 
-      // ── Bottom pipe lip ──
-      ctx.fillStyle = "#5EAA2B";
-      ctx.fillRect(x - lipExtra, botY, pw + lipExtra * 2, lipH);
-      ctx.fillStyle = "#7FCC3C";
-      ctx.fillRect(x - lipExtra, botY, pw + lipExtra * 2, px);
-      ctx.fillStyle = "#7FCC3C";
-      ctx.fillRect(x - lipExtra, botY, px, lipH);
-      ctx.fillStyle = "#3D7A1A";
-      ctx.fillRect(x - lipExtra, botY + lipH - px, pw + lipExtra * 2, px);
-      ctx.fillStyle = "#3D7A1A";
-      ctx.fillRect(x - lipExtra + pw + lipExtra * 2 - px, botY, px, lipH);
-      ctx.strokeStyle = "#2D5016";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x - lipExtra, botY, pw + lipExtra * 2, lipH);
+      // Top pipe body (from top of canvas down to lip)
+      seg(x, 0, pw, topH - lipH);
+      // Top pipe lip (overhangs each side, sits at bottom of body)
+      lip(x - lipOvr, topH - lipH, pw + lipOvr * 2, lipH);
+
+      // Bottom pipe lip (sits at top of bottom body)
+      lip(x - lipOvr, botY, pw + lipOvr * 2, lipH);
+      // Bottom pipe body (from below lip to ground)
+      seg(x, botY + lipH, pw, botH - lipH + 4);
     }
 
     function drawGround(frame: number) {
@@ -620,7 +610,6 @@ export default function GameCanvas({
       if (s.gameStarted && !s.gameOver) {
         const b = s.bird;
         b.velocity += GRAVITY * dt;
-        if (b.velocity > TERMINAL_VEL) b.velocity = TERMINAL_VEL;
         b.y += b.velocity * dt;
         b.rotation = Math.min(Math.max(b.velocity * 0.08, -0.5), 1.1);
 
