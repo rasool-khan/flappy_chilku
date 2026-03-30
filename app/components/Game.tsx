@@ -92,7 +92,7 @@ export default function Game() {
               }
             });
             entries.sort((a, b) => b.score - a.score || a.timestamp - b.timestamp);
-            setPersonalBest(entries.slice(0, 10));
+            setPersonalBest(entries);
           },
           () => {},
         ),

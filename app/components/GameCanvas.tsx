@@ -617,8 +617,13 @@ export default function GameCanvas({
           triggerLose();
         }
 
-        // Speed scales with score: +0.18 per pipe up to a max of 2x base speed
-        const speedMult = Math.min(1 + s.score * 0.018, 2.0);
+        // Speed curve: 2x at score 50, 3x at score 150, capped at 3x
+        // step = (3-1)/150 ≈ 0.01333; at 50 → 1 + 50*0.01333 ≈ 1.667... re-derive:
+        // 2x at 50: 1 + 50k = 2 → k = 0.02; 3x at 150: 1 + 150*0.02 = 4 ≠ 3
+        // Use two-segment linear: 1→2 over 0-50, 2→3 over 50-150
+        const speedMult = s.score <= 50
+          ? 1 + s.score * 0.02
+          : Math.min(2 + (s.score - 50) * 0.01, 3.0);
         const speed = PIPE_SPEED * speedMult * dt;
         for (let i = s.pipes.length - 1; i >= 0; i--) {
           const pipe = s.pipes[i];
