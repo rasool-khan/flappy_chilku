@@ -154,21 +154,22 @@ export default function Game() {
           onRequestUsername={onRequestUsername}
           onScoreSubmit={submitScore}
         />
-        <div className="flex items-center gap-1.5 text-green-200/50 text-[13px] font-medium">
+        <div className="flex items-center gap-2 text-green-200/50 text-[13px] font-medium flex-wrap justify-center">
           <kbd className="px-1.5 py-0.5 rounded bg-green-200/10 text-[10px] font-bold">SPACE</kbd>
           <span className="text-green-200/25">/</span>
           <span>Click</span>
           <span className="text-green-200/25">/</span>
           <span>Tap</span>
+          <span className="text-green-200/15 mx-0.5">·</span>
+          {playerName ? (
+            <span className="inline-flex items-center gap-1.5 text-xs text-green-200/40 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              {playerName}
+            </span>
+          ) : (
+            <span className="text-xs text-green-200/30 font-medium">Enter a name to play</span>
+          )}
         </div>
-        {playerName ? (
-          <span className="inline-flex items-center gap-1.5 text-xs text-green-200/40 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
-            {playerName}
-          </span>
-        ) : (
-          <span className="text-xs text-green-200/30 font-medium">Enter a name to play</span>
-        )}
       </div>
 
       {/* Side Panel */}

@@ -12,7 +12,7 @@ const GRAVITY = 0.52;
 const FLAP_STR = -7.2;
 
 const CANVAS_W = 420;
-const CANVAS_H = 640;
+const CANVAS_H = 700;
 
 const TARGET_DT = 1000 / 60;
 
@@ -82,7 +82,7 @@ export default function GameCanvas({
     s.gameOver = false;
     s.score = 0;
     s.frame = 0;
-    s.bird = { x: 95, y: 240, width: 76, height: 76, velocity: 0, rotation: 0 };
+    s.bird = { x: 95, y: 265, width: 76, height: 76, velocity: 0, rotation: 0 };
     s.pipes = [];
     createPipe(CANVAS_W + 120);
     createPipe(CANVAS_W + 120 + PIPE_SPACING);
@@ -425,7 +425,7 @@ export default function GameCanvas({
       const cw = 300;
       const ch = 70;
       const cx = CANVAS_W / 2 - cw / 2;
-      const cy = 165;
+      const cy = 185;
 
       const pulse = 1 + Math.sin(frame * 0.04) * 0.012;
       ctx.translate(CANVAS_W / 2, cy + ch / 2);
@@ -468,9 +468,9 @@ export default function GameCanvas({
       ctx.lineWidth = 3;
       ctx.lineJoin = "round";
       ctx.strokeStyle = "rgba(20,60,10,0.5)";
-      ctx.strokeText("Tap to Play", CANVAS_W / 2, 268);
+      ctx.strokeText("Tap to Play", CANVAS_W / 2, 295);
       ctx.fillStyle = "#fff";
-      ctx.fillText("Tap to Play", CANVAS_W / 2, 268);
+      ctx.fillText("Tap to Play", CANVAS_W / 2, 295);
       ctx.restore();
     }
 
@@ -488,16 +488,16 @@ export default function GameCanvas({
       ctx.lineWidth = 5;
       ctx.lineJoin = "round";
       ctx.strokeStyle = "rgba(20,60,10,0.6)";
-      ctx.strokeText("Game Over", cx, 188);
+      ctx.strokeText("Game Over", cx, 210);
       ctx.fillStyle = "#fff";
-      ctx.fillText("Game Over", cx, 188);
+      ctx.fillText("Game Over", cx, 210);
       ctx.restore();
 
       // Scoreboard panel — blocky green
       const cardW = 280;
       const cardH = 164;
       const cardX = cx - cardW / 2;
-      const cardY = 208;
+      const cardY = 232;
 
       // Outer
       ctx.fillStyle = "#4B8F22";
@@ -671,7 +671,7 @@ export default function GameCanvas({
       ref={canvasRef}
       width={CANVAS_W}
       height={CANVAS_H}
-      className="block w-full max-w-[420px] aspect-[420/640] rounded-lg shadow-[0_2px_16px_rgba(0,0,0,0.3)] border-2 border-[#5BA829]/40 cursor-pointer touch-none [image-rendering:pixelated]"
+      className="block w-full max-w-[420px] aspect-[420/700] rounded-lg shadow-[0_2px_16px_rgba(0,0,0,0.3)] border-2 border-[#5BA829]/40 cursor-pointer touch-none [image-rendering:pixelated]"
     />
   );
 }

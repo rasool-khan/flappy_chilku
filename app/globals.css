@@ -3,6 +3,12 @@
 :root {
   --background: #0F1F0F;
   --foreground: #D4E8C4;
+  color-scheme: dark;
+}
+
+html {
+  background-color: #0A1A0A;
+  overscroll-behavior: none;
 }
 
 @theme inline {
