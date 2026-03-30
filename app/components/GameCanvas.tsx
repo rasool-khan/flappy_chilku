@@ -617,7 +617,9 @@ export default function GameCanvas({
           triggerLose();
         }
 
-        const speed = PIPE_SPEED * dt;
+        // Speed scales with score: +0.18 per pipe up to a max of 2x base speed
+        const speedMult = Math.min(1 + s.score * 0.018, 2.0);
+        const speed = PIPE_SPEED * speedMult * dt;
         for (let i = s.pipes.length - 1; i >= 0; i--) {
           const pipe = s.pipes[i];
           pipe.x -= speed;
@@ -626,7 +628,9 @@ export default function GameCanvas({
           if (pipe.x + PIPE_W < 0) s.pipes.splice(i, 1);
         }
 
-        if (s.pipes.length && s.pipes[s.pipes.length - 1].x < CANVAS_W - PIPE_SPACING) {
+        // Tighten spacing slightly as speed increases so gap stays fair
+        const dynSpacing = Math.max(PIPE_SPACING - s.score * 1.5, 160);
+        if (s.pipes.length && s.pipes[s.pipes.length - 1].x < CANVAS_W - dynSpacing) {
           createPipe(CANVAS_W + 40);
         }
       }
