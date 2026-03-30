@@ -653,8 +653,17 @@ export default function GameCanvas({
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space") { e.preventDefault(); flap(); }
     };
+    const canvas = canvasRef.current;
+    const onMouse = () => flap();
+    const onTouch = (e: TouchEvent) => { e.preventDefault(); flap(); };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    canvas?.addEventListener("mousedown", onMouse);
+    canvas?.addEventListener("touchstart", onTouch, { passive: false });
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      canvas?.removeEventListener("mousedown", onMouse);
+      canvas?.removeEventListener("touchstart", onTouch);
+    };
   }, [flap]);
 
   return (
@@ -662,8 +671,6 @@ export default function GameCanvas({
       ref={canvasRef}
       width={CANVAS_W}
       height={CANVAS_H}
-      onMouseDown={flap}
-      onTouchStart={(e) => { e.preventDefault(); flap(); }}
       className="block w-full max-w-[420px] aspect-[420/640] rounded-lg shadow-[0_2px_16px_rgba(0,0,0,0.3)] border-2 border-[#5BA829]/40 cursor-pointer touch-none [image-rendering:pixelated]"
     />
   );
