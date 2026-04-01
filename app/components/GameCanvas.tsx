@@ -32,6 +32,16 @@ interface Pipe {
   passed: boolean;
 }
 
+interface Meteor {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  hue: number;
+  trail: { x: number; y: number }[];
+}
+
 /* ── component ──────────────────────────────────────────────── */
 export default function GameCanvas({
   playerName,
@@ -64,6 +74,12 @@ export default function GameCanvas({
     bird: { x: 95, y: 260, width: 76, height: 76, velocity: 0, rotation: 0 } as Bird,
     pipes: [] as Pipe[],
     submitted: "",
+    // X Mode state
+    meteors: [] as Meteor[],
+    xGravityMult: 1,      // current gravity multiplier (surges to 2.5x briefly)
+    xGravityTimer: 0,     // frames until next gravity event
+    xSpeedBurst: 1,       // extra pipe speed multiplier
+    xSpeedTimer: 0,       // frames until next speed burst
   });
 
   const loseSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -88,6 +104,11 @@ export default function GameCanvas({
     s.frame = 0;
     s.bird = { x: 95, y: 265, width: 76, height: 76, velocity: 0, rotation: 0 };
     s.pipes = [];
+    s.meteors = [];
+    s.xGravityMult = 1;
+    s.xGravityTimer = 200;
+    s.xSpeedBurst = 1;
+    s.xSpeedTimer = 300;
     createPipe(CANVAS_W + 120);
     createPipe(CANVAS_W + 120 + PIPE_SPACING);
   }, [createPipe]);
@@ -663,6 +684,73 @@ export default function GameCanvas({
       if (xParticles.length > 150) xParticles.splice(0, xParticles.length - 150);
     }
 
+    function drawMeteors(meteors: Meteor[]) {
+      for (const m of meteors) {
+        // Trail
+        for (let ti = 0; ti < m.trail.length; ti++) {
+          const t = ti / m.trail.length;
+          const tp = m.trail[ti];
+          ctx.save();
+          ctx.globalAlpha = t * 0.6;
+          const trailSize = m.size * t * 0.9;
+          ctx.fillStyle = `hsl(${m.hue}, 90%, 65%)`;
+          ctx.shadowColor = `hsl(${m.hue}, 100%, 60%)`;
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(tp.x, tp.y, trailSize, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        // Core
+        ctx.save();
+        ctx.shadowColor = `hsl(${m.hue}, 100%, 70%)`;
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = `hsl(${m.hue}, 80%, 75%)`;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
+        ctx.fill();
+        // Bright center
+        ctx.fillStyle = "#fff";
+        ctx.shadowBlur = 5;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawXWarningOverlay(s: typeof stateRef.current) {
+      // Show gravity surge warning
+      if (s.xGravityMult > 1.5) {
+        const surgeAlpha = 0.04 + 0.03 * Math.sin(s.frame * 0.4);
+        ctx.save();
+        ctx.globalAlpha = surgeAlpha;
+        ctx.fillStyle = "#FF4500";
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.restore();
+        // Warning text flash
+        if (s.frame % 30 < 15) {
+          ctx.save();
+          ctx.textAlign = "center";
+          ctx.font = "400 7px 'Press Start 2P', monospace";
+          ctx.fillStyle = "rgba(255,100,50,0.7)";
+          ctx.fillText("⚠ GRAVITY SURGE ⚠", CANVAS_W / 2, CANVAS_H - GROUND_H - 12);
+          ctx.restore();
+        }
+      }
+      // Speed burst indicator
+      if (s.xSpeedBurst > 1.2) {
+        if (s.frame % 20 < 10) {
+          ctx.save();
+          ctx.textAlign = "center";
+          ctx.font = "400 7px 'Press Start 2P', monospace";
+          ctx.fillStyle = "rgba(168,85,247,0.6)";
+          ctx.fillText("⚡ HYPERSPEED ⚡", CANVAS_W / 2, CANVAS_H - GROUND_H - 12);
+          ctx.restore();
+        }
+      }
+    }
+
     function drawScoreHUD(s: typeof stateRef.current) {
       ctx.save();
       ctx.textAlign = "center";
@@ -1065,7 +1153,10 @@ export default function GameCanvas({
       // ── physics ──
       if (s.gameStarted && !s.gameOver) {
         const b = s.bird;
-        b.velocity += GRAVITY * dt;
+
+        // X Mode: gravity surge events
+        const effectiveGravity = xModeRef.current ? GRAVITY * s.xGravityMult : GRAVITY;
+        b.velocity += effectiveGravity * dt;
         b.y += b.velocity * dt;
         b.rotation = Math.min(Math.max(b.velocity * 0.08, -0.5), 1.1);
 
@@ -1073,14 +1164,11 @@ export default function GameCanvas({
           triggerLose();
         }
 
-        // Speed curve: 2x at score 50, 3x at score 150, capped at 3x
-        // step = (3-1)/150 ≈ 0.01333; at 50 → 1 + 50*0.01333 ≈ 1.667... re-derive:
-        // 2x at 50: 1 + 50k = 2 → k = 0.02; 3x at 150: 1 + 150*0.02 = 4 ≠ 3
-        // Use two-segment linear: 1→2 over 0-50, 2→3 over 50-150
+        // Speed curve: 1→2 over 0-50, 2→3 over 50-150
         const speedMult = s.score <= 50
           ? 1 + s.score * 0.02
           : Math.min(2 + (s.score - 50) * 0.01, 3.0);
-        const speed = PIPE_SPEED * speedMult * dt;
+        const speed = PIPE_SPEED * speedMult * (xModeRef.current ? s.xSpeedBurst : 1) * dt;
         for (let i = s.pipes.length - 1; i >= 0; i--) {
           const pipe = s.pipes[i];
           pipe.x -= speed;
@@ -1089,10 +1177,95 @@ export default function GameCanvas({
           if (pipe.x + PIPE_W < 0) s.pipes.splice(i, 1);
         }
 
-        // Widen spacing as speed increases so there's always room to navigate
         const dynSpacing = Math.min(PIPE_SPACING + s.score * 2.5, 420);
         if (s.pipes.length && s.pipes[s.pipes.length - 1].x < CANVAS_W - dynSpacing) {
           createPipe(CANVAS_W + 40);
+        }
+
+        // ── X Mode exclusive mechanics ──
+        if (xModeRef.current) {
+          // Gravity surge: countdown → activate surge → countdown to reset
+          s.xGravityTimer--;
+          if (s.xGravityTimer <= 0) {
+            if (s.xGravityMult > 1) {
+              // End surge, wait 250-380 frames before next
+              s.xGravityMult = 1;
+              s.xGravityTimer = 250 + Math.floor(Math.random() * 130);
+            } else {
+              // Start surge for 80 frames
+              s.xGravityMult = 2.2;
+              s.xGravityTimer = 80;
+            }
+          }
+
+          // Speed burst: countdown → activate burst → countdown to reset
+          s.xSpeedTimer--;
+          if (s.xSpeedTimer <= 0) {
+            if (s.xSpeedBurst > 1) {
+              s.xSpeedBurst = 1;
+              s.xSpeedTimer = 300 + Math.floor(Math.random() * 200);
+            } else {
+              s.xSpeedBurst = 1.6;
+              s.xSpeedTimer = 55;
+            }
+          }
+
+          // Meteor spawning — rate increases with score
+          const meteorRate = Math.max(90 - s.score * 1.2, 30);
+          if (s.frame % Math.floor(meteorRate) === 0) {
+            const fromTop = Math.random() > 0.5;
+            const mHue = 260 + Math.random() * 80; // purple-pink range
+            if (fromTop) {
+              // Spawn from top, falling diagonally
+              s.meteors.push({
+                x: 120 + Math.random() * (CANVAS_W - 60),
+                y: -20,
+                vx: -1.5 - Math.random() * 1.5,
+                vy: 3.5 + Math.random() * 2.5,
+                size: 6 + Math.random() * 7,
+                hue: mHue,
+                trail: [],
+              });
+            } else {
+              // Spawn from right side, moving left-diagonally
+              s.meteors.push({
+                x: CANVAS_W + 20,
+                y: 60 + Math.random() * (CANVAS_H - GROUND_H - 100),
+                vx: -4 - Math.random() * 3,
+                vy: 1 - Math.random() * 2,
+                size: 5 + Math.random() * 6,
+                hue: mHue,
+                trail: [],
+              });
+            }
+          }
+
+          // Update meteors
+          for (let i = s.meteors.length - 1; i >= 0; i--) {
+            const m = s.meteors[i];
+            m.trail.push({ x: m.x, y: m.y });
+            if (m.trail.length > 18) m.trail.shift();
+            m.x += m.vx * dt;
+            m.y += m.vy * dt;
+
+            // Collision: circle vs bird AABB (tight)
+            const bL = b.x - b.width / 2 + 10;
+            const bR = b.x + b.width / 2 - 10;
+            const bT = b.y - b.height / 2 + 10;
+            const bBo = b.y + b.height / 2 - 10;
+            const nearX = Math.max(bL, Math.min(m.x, bR));
+            const nearY = Math.max(bT, Math.min(m.y, bBo));
+            const dx = m.x - nearX;
+            const dy = m.y - nearY;
+            if (dx * dx + dy * dy < m.size * m.size) {
+              triggerLose();
+            }
+
+            // Remove off-screen
+            if (m.x < -m.size - 20 || m.y > CANVAS_H + m.size || m.y < -m.size - 100) {
+              s.meteors.splice(i, 1);
+            }
+          }
         }
       }
 
@@ -1111,7 +1284,9 @@ export default function GameCanvas({
       if (xModeRef.current) drawXParticles();
       for (const pipe of s.pipes) drawPipe(pipe.x, pipe.topHeight);
       drawGround(s.frame);
+      if (xModeRef.current && s.meteors.length > 0) drawMeteors(s.meteors);
       drawBird(s.bird);
+      if (xModeRef.current && s.gameStarted && !s.gameOver) drawXWarningOverlay(s);
       drawScoreHUD(s);
       if (!s.gameStarted) drawTitleScreen(s.frame);
       if (s.gameOver) drawGameOver(s, s.frame);

@@ -27,7 +27,7 @@ interface Entry {
 }
 
 /* ── component ────────────────────────────────────────── */
-export default function Game({ xMode }: { xMode: boolean }) {
+export default function Game({ xMode, setXMode }: { xMode: boolean; setXMode: (v: boolean | ((p: boolean) => boolean)) => void }) {
   const [playerName, setPlayerName] = useState(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem("customFlappyUsername") || "";
@@ -48,6 +48,11 @@ export default function Game({ xMode }: { xMode: boolean }) {
 
   /* ── init firebase + realtime listeners ─────────────── */
   useEffect(() => {
+    // Clear stale data when switching modes (deferred to avoid synchronous setState-in-effect lint rule)
+    const clearTimer = setTimeout(() => {
+      setLeaderboard([]);
+      setPersonalBest([]);
+    }, 0);
     try {
       const db = getFirebaseDb();
       lbRef.current = ref(db, xMode ? X_LEADERBOARD_PATH : LEADERBOARD_PATH);
@@ -99,7 +104,7 @@ export default function Game({ xMode }: { xMode: boolean }) {
       );
     }
 
-    return () => unsubs.forEach((u) => u());
+    return () => { clearTimeout(clearTimer); unsubs.forEach((u) => u()); };
   }, [xMode]);
 
   /* ── save username ──────────────────────────────────── */
@@ -214,6 +219,34 @@ export default function Game({ xMode }: { xMode: boolean }) {
           </p>
         </section>
 
+        {/* X Mode Toggle */}
+        <button
+          onClick={() => setXMode((v) => !v)}
+          className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-[13px] font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer select-none ${
+            x
+              ? "bg-[#1A0F2E]/80 border border-purple-500/30 text-purple-300 shadow-[0_0_16px_rgba(168,85,247,0.15)]"
+              : "bg-[#1A2E15]/80 border border-[#5BA829]/20 text-green-200/40 hover:text-green-200/60 hover:border-[#5BA829]/35"
+          }`}
+        >
+          <span className="flex items-center gap-2.5">
+            <span className={`relative w-9 h-5 rounded-full transition-colors duration-300 flex-shrink-0 ${
+              x ? "bg-purple-500" : "bg-green-200/15"
+            }`}>
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-all duration-300 ${
+                x ? "left-[18px] bg-white shadow-[0_0_8px_rgba(168,85,247,0.7)]" : "left-0.5 bg-green-200/40"
+              }`} />
+            </span>
+            <span>X Mode</span>
+          </span>
+          {x && (
+            <span className="flex items-center gap-2 text-[11px] tracking-widest">
+              <span className="animate-pulse">⚡</span>
+              <span className="text-purple-400/60">ACTIVE</span>
+              <span className="animate-pulse">⚡</span>
+            </span>
+          )}
+        </button>
+
         {/* Leaderboard */}
         <LeaderboardCard leaderboard={leaderboard} personalBest={personalBest} xMode={xMode} />
       </aside>
@@ -229,13 +262,18 @@ function LeaderboardCard({ leaderboard, personalBest, xMode }: { leaderboard: En
 
   return (
     <section className={`rounded-2xl p-4 transition-colors duration-300 ${
-      x ? "bg-[#1A0F2E]/80 border border-purple-500/20" : "bg-[#1A2E15]/80 border border-[#5BA829]/20"
+      x ? "bg-[#1A0F2E]/80 border border-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.08)]" : "bg-[#1A2E15]/80 border border-[#5BA829]/20"
     }`}>
-      {x && (
-        <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-[13px]">⚡</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-purple-400/60">X Mode Leaderboard</span>
+      {x ? (
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-base">⚡</span>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-purple-300/80">X Mode Rankings</span>
+          </div>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-purple-500/50 border border-purple-500/20 rounded px-1.5 py-0.5">Separate</span>
         </div>
+      ) : (
+        <p className="text-[13px] font-semibold text-green-200/70 mb-3">Leaderboard</p>
       )}
       <div className={`flex gap-0.5 p-0.5 rounded-lg mb-3 ${x ? "bg-[#120A20]/60" : "bg-[#0F1F0F]/60"}`}>
         {(["top", "best"] as const).map((t) => (
