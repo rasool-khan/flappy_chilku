@@ -14,7 +14,10 @@ export default function Home() {
     document.documentElement.classList.toggle("x-mode", xMode);
     document.body.classList.toggle("x-mode", xMode);
 
-    // Update browser chrome color
+    // Override the SSR-rendered inline backgroundColor on <html> (inline styles beat CSS classes)
+    document.documentElement.style.backgroundColor = xMode ? "#0D0A1A" : "#0A1A0A";
+
+    // Update browser chrome / address bar color
     let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
     if (!meta) {
       meta = document.createElement("meta");

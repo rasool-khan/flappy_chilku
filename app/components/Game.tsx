@@ -48,11 +48,9 @@ export default function Game({ xMode, setXMode }: { xMode: boolean; setXMode: (v
 
   /* ── init firebase + realtime listeners ─────────────── */
   useEffect(() => {
-    // Clear stale data when switching modes (deferred to avoid synchronous setState-in-effect lint rule)
-    const clearTimer = setTimeout(() => {
-      setLeaderboard([]);
-      setPersonalBest([]);
-    }, 0);
+    // Clear stale data immediately when switching modes
+    setLeaderboard([]);
+    setPersonalBest([]);
     try {
       const db = getFirebaseDb();
       lbRef.current = ref(db, xMode ? X_LEADERBOARD_PATH : LEADERBOARD_PATH);
@@ -104,7 +102,7 @@ export default function Game({ xMode, setXMode }: { xMode: boolean; setXMode: (v
       );
     }
 
-    return () => { clearTimeout(clearTimer); unsubs.forEach((u) => u()); };
+    return () => { unsubs.forEach((u) => u()); };
   }, [xMode]);
 
   /* ── save username ──────────────────────────────────── */
