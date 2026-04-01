@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, startTransition } from "react";
 import {
   ref,
   push,
@@ -48,9 +48,11 @@ export default function Game({ xMode, setXMode }: { xMode: boolean; setXMode: (v
 
   /* ── init firebase + realtime listeners ─────────────── */
   useEffect(() => {
-    // Clear stale data immediately when switching modes
-    setLeaderboard([]);
-    setPersonalBest([]);
+    // Clear stale data when switching modes
+    startTransition(() => {
+      setLeaderboard([]);
+      setPersonalBest([]);
+    });
     try {
       const db = getFirebaseDb();
       lbRef.current = ref(db, xMode ? X_LEADERBOARD_PATH : LEADERBOARD_PATH);

@@ -93,59 +93,9 @@ export default function GameCanvas({
   // Pixel-accurate collision mask from the processed bird sprite
   const birdMaskRef = useRef<{ w: number; h: number; alpha: Uint8Array } | null>(null);
 
-  /* ── helpers ─────────────────────────────────────────────── */
-  const createPipe = useCallback((x: number) => {
-    const minTop = 80;
-    const maxTop = CANVAS_H - GROUND_H - PIPE_GAP - 120;
-    const topHeight = Math.random() * (maxTop - minTop) + minTop;
-    stateRef.current.pipes.push({ x, topHeight, passed: false });
-  }, []);
-
-  const resetGame = useCallback(() => {
-    const s = stateRef.current;
-    s.gameStarted = false;
-    s.gameOver = false;
-    s.score = 0;
-    s.frame = 0;
-    s.bird = { x: 95, y: 265, width: 76, height: 76, velocity: 0, rotation: 0 };
-    s.pipes = [];
-    s.meteors = [];
-    s.xGravityMult = 1;
-    s.xGravityTimer = 200;
-    s.xSpeedBurst = 1;
-    s.xSpeedTimer = 300;
-    createPipe(CANVAS_W + 120);
-    createPipe(CANVAS_W + 120 + PIPE_SPACING);
-  }, [createPipe]);
-
-  const triggerLose = useCallback(() => {
-    const s = stateRef.current;
-    if (s.gameOver) return;
-    s.gameOver = true;
-    try {
-      const snd = loseSoundRef.current;
-      if (snd) { snd.currentTime = 0; snd.play().catch(() => {}); }
-    } catch { /* */ }
-    if (s.score > s.bestScore) {
-      s.bestScore = s.score;
-      const bestKey = xModeRef.current ? "xModeFlappyBest" : "customFlappyBest";
-      localStorage.setItem(bestKey, String(s.bestScore));
-    }
-    const pName = playerNameRef.current;
-    const key = `${pName}:${s.score}:${s.bestScore}`;
-    if (key !== s.submitted && s.score > 0) {
-      s.submitted = key;
-      onScoreSubmitRef.current(s.score);
-    }
-  }, []);
-
-  const flap = useCallback(() => {
-    if (!playerNameRef.current) { onRequestUsernameRef.current(); return; }
-    const s = stateRef.current;
-    if (!s.gameStarted) s.gameStarted = true;
-    if (s.gameOver) { resetGame(); s.gameStarted = true; }
-    s.bird.velocity = FLAP_STR;
-  }, [resetGame]);
+  /* ── helpers (defined inside effect — see init useEffect) ─── */
+  const flapFn = useRef<(() => void) | null>(null);
+  const flap = useCallback(() => { flapFn.current?.(); }, []);
 
   /* ── init ────────────────────────────────────────────────── */
   useEffect(() => {
@@ -154,7 +104,61 @@ export default function GameCanvas({
     const ctx = canvas.getContext("2d")!;
     ctx.imageSmoothingEnabled = false;
 
-    stateRef.current.bestScore = Number(localStorage.getItem(xMode ? "xModeFlappyBest" : "customFlappyBest") || 0);
+    // Note: bestScore is initialised by the xMode effect (which runs first on mount)
+
+    /* ── inner helpers (imperative game logic) ───────────────── */
+    function createPipe(x: number) {
+      const minTop = 80;
+      const maxTop = CANVAS_H - GROUND_H - PIPE_GAP - 120;
+      const topHeight = Math.random() * (maxTop - minTop) + minTop;
+      stateRef.current.pipes.push({ x, topHeight, passed: false });
+    }
+
+    function resetGame() {
+      const s = stateRef.current;
+      s.gameStarted = false;
+      s.gameOver = false;
+      s.score = 0;
+      s.frame = 0;
+      s.bird = { x: 95, y: 265, width: 76, height: 76, velocity: 0, rotation: 0 };
+      s.pipes = [];
+      s.meteors = [];
+      s.xGravityMult = 1;
+      s.xGravityTimer = 200;
+      s.xSpeedBurst = 1;
+      s.xSpeedTimer = 300;
+      createPipe(CANVAS_W + 120);
+      createPipe(CANVAS_W + 120 + PIPE_SPACING);
+    }
+
+    function triggerLose() {
+      const s = stateRef.current;
+      if (s.gameOver) return;
+      s.gameOver = true;
+      try {
+        const snd = loseSoundRef.current;
+        if (snd) { snd.currentTime = 0; snd.play().catch(() => {}); }
+      } catch { /* */ }
+      if (s.score > s.bestScore) {
+        s.bestScore = s.score;
+        const bestKey = xModeRef.current ? "xModeFlappyBest" : "customFlappyBest";
+        localStorage.setItem(bestKey, String(s.bestScore));
+      }
+      const pName = playerNameRef.current;
+      const key = `${pName}:${s.score}:${s.bestScore}`;
+      if (key !== s.submitted && s.score > 0) {
+        s.submitted = key;
+        onScoreSubmitRef.current(s.score);
+      }
+    }
+
+    flapFn.current = () => {
+      if (!playerNameRef.current) { onRequestUsernameRef.current(); return; }
+      const s = stateRef.current;
+      if (!s.gameStarted) s.gameStarted = true;
+      if (s.gameOver) { resetGame(); s.gameStarted = true; }
+      s.bird.velocity = FLAP_STR;
+    };
 
     // Load bird image & build alpha mask for pixel-perfect collision
     const birdImg = new Image();
@@ -1303,8 +1307,8 @@ export default function GameCanvas({
     }
 
     raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [resetGame, triggerLose, createPipe]);
+    return () => { cancelAnimationFrame(raf); flapFn.current = null; };
+  }, []);
 
   /* ── input handlers ─────────────────────────────────────── */
   useEffect(() => {
