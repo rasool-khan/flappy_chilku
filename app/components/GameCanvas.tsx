@@ -63,7 +63,12 @@ export default function GameCanvas({
   useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
   useEffect(() => { onRequestUsernameRef.current = onRequestUsername; }, [onRequestUsername]);
   useEffect(() => { onScoreSubmitRef.current = onScoreSubmit; }, [onScoreSubmit]);
-  useEffect(() => { xModeRef.current = xMode; }, [xMode]);
+  useEffect(() => {
+    xModeRef.current = xMode;
+    // Reload best score from the appropriate key when mode changes
+    const bestKey = xMode ? "xModeFlappyBest" : "customFlappyBest";
+    stateRef.current.bestScore = Number(localStorage.getItem(bestKey) || 0);
+  }, [xMode]);
 
   const stateRef = useRef({
     gameStarted: false,
@@ -123,7 +128,8 @@ export default function GameCanvas({
     } catch { /* */ }
     if (s.score > s.bestScore) {
       s.bestScore = s.score;
-      localStorage.setItem("customFlappyBest", String(s.bestScore));
+      const bestKey = xModeRef.current ? "xModeFlappyBest" : "customFlappyBest";
+      localStorage.setItem(bestKey, String(s.bestScore));
     }
     const pName = playerNameRef.current;
     const key = `${pName}:${s.score}:${s.bestScore}`;
@@ -148,7 +154,7 @@ export default function GameCanvas({
     const ctx = canvas.getContext("2d")!;
     ctx.imageSmoothingEnabled = false;
 
-    stateRef.current.bestScore = Number(localStorage.getItem("customFlappyBest") || 0);
+    stateRef.current.bestScore = Number(localStorage.getItem(xMode ? "xModeFlappyBest" : "customFlappyBest") || 0);
 
     // Load bird image & build alpha mask for pixel-perfect collision
     const birdImg = new Image();
@@ -721,7 +727,7 @@ export default function GameCanvas({
 
     function drawXWarningOverlay(s: typeof stateRef.current) {
       // Show gravity surge warning
-      if (s.xGravityMult > 1.5) {
+      if (s.xGravityMult > 1.2) {
         const surgeAlpha = 0.04 + 0.03 * Math.sin(s.frame * 0.4);
         ctx.save();
         ctx.globalAlpha = surgeAlpha;
@@ -739,7 +745,7 @@ export default function GameCanvas({
         }
       }
       // Speed burst indicator
-      if (s.xSpeedBurst > 1.2) {
+      if (s.xSpeedBurst > 1.1) {
         if (s.frame % 20 < 10) {
           ctx.save();
           ctx.textAlign = "center";
@@ -1188,13 +1194,13 @@ export default function GameCanvas({
           s.xGravityTimer--;
           if (s.xGravityTimer <= 0) {
             if (s.xGravityMult > 1) {
-              // End surge, wait 250-380 frames before next
+              // End surge, wait 360-520 frames before next
               s.xGravityMult = 1;
-              s.xGravityTimer = 250 + Math.floor(Math.random() * 130);
+              s.xGravityTimer = 360 + Math.floor(Math.random() * 160);
             } else {
-              // Start surge for 80 frames
-              s.xGravityMult = 2.2;
-              s.xGravityTimer = 80;
+              // Start surge for 55 frames
+              s.xGravityMult = 1.7;
+              s.xGravityTimer = 55;
             }
           }
 
@@ -1203,15 +1209,15 @@ export default function GameCanvas({
           if (s.xSpeedTimer <= 0) {
             if (s.xSpeedBurst > 1) {
               s.xSpeedBurst = 1;
-              s.xSpeedTimer = 300 + Math.floor(Math.random() * 200);
+              s.xSpeedTimer = 350 + Math.floor(Math.random() * 200);
             } else {
-              s.xSpeedBurst = 1.6;
-              s.xSpeedTimer = 55;
+              s.xSpeedBurst = 1.3;
+              s.xSpeedTimer = 35;
             }
           }
 
           // Meteor spawning — rate increases with score
-          const meteorRate = Math.max(90 - s.score * 1.2, 30);
+          const meteorRate = Math.max(120 - s.score * 0.8, 55);
           if (s.frame % Math.floor(meteorRate) === 0) {
             const fromTop = Math.random() > 0.5;
             const mHue = 260 + Math.random() * 80; // purple-pink range
@@ -1220,9 +1226,9 @@ export default function GameCanvas({
               s.meteors.push({
                 x: 120 + Math.random() * (CANVAS_W - 60),
                 y: -20,
-                vx: -1.5 - Math.random() * 1.5,
-                vy: 3.5 + Math.random() * 2.5,
-                size: 6 + Math.random() * 7,
+                vx: -1 - Math.random() * 1,
+                vy: 2.5 + Math.random() * 1.5,
+                size: 5 + Math.random() * 6,
                 hue: mHue,
                 trail: [],
               });
@@ -1231,9 +1237,9 @@ export default function GameCanvas({
               s.meteors.push({
                 x: CANVAS_W + 20,
                 y: 60 + Math.random() * (CANVAS_H - GROUND_H - 100),
-                vx: -4 - Math.random() * 3,
-                vy: 1 - Math.random() * 2,
-                size: 5 + Math.random() * 6,
+                vx: -3 - Math.random() * 2,
+                vy: 0.5 - Math.random() * 1,
+                size: 4 + Math.random() * 5,
                 hue: mHue,
                 trail: [],
               });

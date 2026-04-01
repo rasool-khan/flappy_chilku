@@ -13,6 +13,15 @@ export default function Home() {
     localStorage.setItem("flappyXMode", String(xMode));
     document.documentElement.classList.toggle("x-mode", xMode);
     document.body.classList.toggle("x-mode", xMode);
+
+    // Update browser chrome color
+    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      document.head.appendChild(meta);
+    }
+    meta.content = xMode ? "#0D0A1A" : "#0A1A0A";
   }, [xMode]);
 
   return (
