@@ -1,0 +1,20 @@
+{
+  "rules": {
+    "leaderboard": {
+      ".read": true,
+      ".write": true
+    },
+    "leaderboardBestByPlayer": {
+      ".read": true,
+      ".write": true
+    },
+    "xmode_leaderboard": {
+      ".read": true,
+      ".write": true
+    },
+    "xmode_leaderboardBestByPlayer": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

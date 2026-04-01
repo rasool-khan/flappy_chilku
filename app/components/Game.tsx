@@ -130,8 +130,13 @@ export default function Game({ xMode, setXMode }: { xMode: boolean; setXMode: (v
       }
       if (!readyRef.current || score <= 0) return;
       if (lbRef.current) {
-        push(lbRef.current, { username: playerName, score, timestamp: Date.now() }).catch(() => {
-          setStatus("Score saved locally — check your connection.");
+        push(lbRef.current, { username: playerName, score, timestamp: Date.now() }).catch((err) => {
+          const msg = String(err?.message || err || "");
+          if (msg.includes("permission") || msg.includes("PERMISSION") || msg.includes("denied")) {
+            setStatus("Score blocked by database rules — check Firebase console.");
+          } else {
+            setStatus("Score couldn’t save — check your connection.");
+          }
           setStatusError(true);
         });
       }
@@ -160,8 +165,8 @@ export default function Game({ xMode, setXMode }: { xMode: boolean; setXMode: (v
   const x = xMode; // shorthand
   return (
     <div className="w-full max-w-[1040px] mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,420px)_1fr] gap-5 lg:gap-8 items-start justify-center px-4 py-5 lg:py-8">
-      {/* Game Column — second on mobile, first on desktop */}
-      <div className="flex flex-col items-center gap-3 justify-self-center order-2 lg:order-1">
+      {/* Game Column */}
+      <div className="flex flex-col items-center gap-3 justify-self-center">
         <GameCanvas
           playerName={playerName}
           onRequestUsername={onRequestUsername}
@@ -186,8 +191,8 @@ export default function Game({ xMode, setXMode }: { xMode: boolean; setXMode: (v
         </div>
       </div>
 
-      {/* Side Panel — first on mobile, second on desktop */}
-      <aside className="flex flex-col gap-3 w-full max-w-[400px] justify-self-center lg:justify-self-start order-1 lg:order-2">
+      {/* Side Panel */}
+      <aside className="flex flex-col gap-3 w-full max-w-[400px] justify-self-center lg:justify-self-start">
         {/* Username */}
         <section className={`rounded-2xl p-4 transition-colors duration-300 ${
           x ? "bg-[#1A0F2E]/80 border border-purple-500/20" : "bg-[#1A2E15]/80 border border-[#5BA829]/20"
