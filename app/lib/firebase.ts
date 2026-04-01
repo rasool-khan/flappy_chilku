@@ -32,3 +32,6 @@ export function getFirebaseDb(): Database {
 
 export const LEADERBOARD_PATH = "leaderboard";
 export const UNIQUE_LEADERBOARD_PATH = "leaderboardBestByPlayer";
+
+export const X_LEADERBOARD_PATH = "xmode_leaderboard";
+export const X_UNIQUE_LEADERBOARD_PATH = "xmode_leaderboardBestByPlayer";

@@ -8,7 +8,7 @@ import {
   runTransaction,
   type DatabaseReference,
 } from "firebase/database";
-import { getFirebaseDb, LEADERBOARD_PATH, UNIQUE_LEADERBOARD_PATH } from "../lib/firebase";
+import { getFirebaseDb, LEADERBOARD_PATH, UNIQUE_LEADERBOARD_PATH, X_LEADERBOARD_PATH, X_UNIQUE_LEADERBOARD_PATH } from "../lib/firebase";
 import GameCanvas from "./GameCanvas";
 
 /* ── helpers ──────────────────────────────────────────── */
@@ -27,7 +27,7 @@ interface Entry {
 }
 
 /* ── component ────────────────────────────────────────── */
-export default function Game() {
+export default function Game({ xMode }: { xMode: boolean }) {
   const [playerName, setPlayerName] = useState(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem("customFlappyUsername") || "";
@@ -50,8 +50,8 @@ export default function Game() {
   useEffect(() => {
     try {
       const db = getFirebaseDb();
-      lbRef.current = ref(db, LEADERBOARD_PATH);
-      ubRef.current = ref(db, UNIQUE_LEADERBOARD_PATH);
+      lbRef.current = ref(db, xMode ? X_LEADERBOARD_PATH : LEADERBOARD_PATH);
+      ubRef.current = ref(db, xMode ? X_UNIQUE_LEADERBOARD_PATH : UNIQUE_LEADERBOARD_PATH);
       readyRef.current = true;
     } catch {
       return;
@@ -100,7 +100,7 @@ export default function Game() {
     }
 
     return () => unsubs.forEach((u) => u());
-  }, []);
+  }, [xMode]);
 
   /* ── save username ──────────────────────────────────── */
   const saveUsername = useCallback((raw: string) => {
@@ -126,7 +126,8 @@ export default function Game() {
       }
       if (ubRef.current) {
         const key = uniqueKey(playerName);
-        const childRef = ref(getFirebaseDb(), `${UNIQUE_LEADERBOARD_PATH}/${key}`);
+        const ubPath = xMode ? X_UNIQUE_LEADERBOARD_PATH : UNIQUE_LEADERBOARD_PATH;
+        const childRef = ref(getFirebaseDb(), `${ubPath}/${key}`);
         runTransaction(childRef, (cur) => {
           if (!cur || typeof cur.score !== "number" || score > cur.score) {
             return { username: playerName, score, timestamp: Date.now() };
@@ -135,7 +136,7 @@ export default function Game() {
         }).catch(() => {});
       }
     },
-    [playerName],
+    [playerName, xMode],
   );
 
   const onRequestUsername = useCallback(() => {
@@ -145,6 +146,7 @@ export default function Game() {
   }, []);
 
   /* ── render ─────────────────────────────────────────── */
+  const x = xMode; // shorthand
   return (
     <div className="w-full max-w-[1040px] mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,420px)_1fr] gap-5 lg:gap-8 items-start justify-center px-4 py-5 lg:py-8">
       {/* Game Column */}
@@ -153,21 +155,22 @@ export default function Game() {
           playerName={playerName}
           onRequestUsername={onRequestUsername}
           onScoreSubmit={submitScore}
+          xMode={xMode}
         />
-        <div className="flex items-center gap-2 text-green-200/50 text-[13px] font-medium flex-wrap justify-center">
-          <kbd className="px-1.5 py-0.5 rounded bg-green-200/10 text-[10px] font-bold">SPACE</kbd>
-          <span className="text-green-200/25">/</span>
+        <div className={`flex items-center gap-2 text-[13px] font-medium flex-wrap justify-center ${x ? "text-purple-300/50" : "text-green-200/50"}`}>
+          <kbd className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${x ? "bg-purple-400/10" : "bg-green-200/10"}`}>SPACE</kbd>
+          <span className={x ? "text-purple-300/25" : "text-green-200/25"}>/</span>
           <span>Click</span>
-          <span className="text-green-200/25">/</span>
+          <span className={x ? "text-purple-300/25" : "text-green-200/25"}>/</span>
           <span>Tap</span>
-          <span className="text-green-200/15 mx-0.5">·</span>
+          <span className={`mx-0.5 ${x ? "text-purple-300/15" : "text-green-200/15"}`}>·</span>
           {playerName ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-green-200/40 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+            <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${x ? "text-purple-300/40" : "text-green-200/40"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${x ? "bg-purple-400" : "bg-green-400"}`} />
               {playerName}
             </span>
           ) : (
-            <span className="text-xs text-green-200/30 font-medium">Enter a name to play</span>
+            <span className={`text-xs font-medium ${x ? "text-purple-300/30" : "text-green-200/30"}`}>Enter a name to play</span>
           )}
         </div>
       </div>
@@ -175,8 +178,10 @@ export default function Game() {
       {/* Side Panel */}
       <aside className="flex flex-col gap-3 w-full max-w-[400px] justify-self-center lg:justify-self-start">
         {/* Username */}
-        <section className="rounded-2xl bg-[#1A2E15]/80 border border-[#5BA829]/20 p-4">
-          <p className="text-[13px] font-semibold text-green-200/70 mb-3">Username</p>
+        <section className={`rounded-2xl p-4 transition-colors duration-300 ${
+          x ? "bg-[#1A0F2E]/80 border border-purple-500/20" : "bg-[#1A2E15]/80 border border-[#5BA829]/20"
+        }`}>
+          <p className={`text-[13px] font-semibold mb-3 ${x ? "text-purple-200/70" : "text-green-200/70"}`}>Username</p>
           <form
             className="flex gap-2"
             onSubmit={(e) => { e.preventDefault(); saveUsername(inputVal); }}
@@ -189,58 +194,74 @@ export default function Game() {
               autoComplete="nickname"
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
-              className="flex-1 min-w-0 h-9 px-3 rounded-lg bg-[#0F1F0F]/80 border border-[#5BA829]/25 text-green-100 text-sm placeholder:text-green-200/25 focus:outline-none focus:ring-1 focus:ring-green-400/40 transition-all"
+              className={`flex-1 min-w-0 h-9 px-3 rounded-lg text-sm focus:outline-none focus:ring-1 transition-all ${
+                x
+                  ? "bg-[#120A20]/80 border border-purple-500/25 text-purple-100 placeholder:text-purple-200/25 focus:ring-purple-400/40"
+                  : "bg-[#0F1F0F]/80 border border-[#5BA829]/25 text-green-100 placeholder:text-green-200/25 focus:ring-green-400/40"
+              }`}
             />
             <button
               type="submit"
-              className="h-9 px-4 rounded-lg bg-[#5BA829] text-white text-[13px] font-bold hover:bg-[#6BCB32] active:scale-[0.97] transition-all cursor-pointer"
+              className={`h-9 px-4 rounded-lg text-white text-[13px] font-bold active:scale-[0.97] transition-all cursor-pointer ${
+                x ? "bg-purple-600 hover:bg-purple-500" : "bg-[#5BA829] hover:bg-[#6BCB32]"
+              }`}
             >
               Save
             </button>
           </form>
-          <p className={`mt-2 text-[11px] font-medium min-h-[16px] ${statusError ? "text-red-400/80" : "text-green-400/60"}`}>
+          <p className={`mt-2 text-[11px] font-medium min-h-[16px] ${statusError ? "text-red-400/80" : x ? "text-purple-400/60" : "text-green-400/60"}`}>
             {status}
           </p>
         </section>
 
         {/* Leaderboard */}
-        <LeaderboardCard leaderboard={leaderboard} personalBest={personalBest} />
+        <LeaderboardCard leaderboard={leaderboard} personalBest={personalBest} xMode={xMode} />
       </aside>
     </div>
   );
 }
 
 /* ── Leaderboard Card with Tabs ───────────────────────── */
-function LeaderboardCard({ leaderboard, personalBest }: { leaderboard: Entry[]; personalBest: Entry[] }) {
+function LeaderboardCard({ leaderboard, personalBest, xMode }: { leaderboard: Entry[]; personalBest: Entry[]; xMode: boolean }) {
   const [tab, setTab] = useState<"top" | "best">("top");
   const entries = tab === "top" ? leaderboard : personalBest;
+  const x = xMode;
 
   return (
-    <section className="rounded-2xl bg-[#1A2E15]/80 border border-[#5BA829]/20 p-4">
-      <div className="flex gap-0.5 p-0.5 rounded-lg bg-[#0F1F0F]/60 mb-3">
+    <section className={`rounded-2xl p-4 transition-colors duration-300 ${
+      x ? "bg-[#1A0F2E]/80 border border-purple-500/20" : "bg-[#1A2E15]/80 border border-[#5BA829]/20"
+    }`}>
+      {x && (
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className="text-[13px]">⚡</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-purple-400/60">X Mode Leaderboard</span>
+        </div>
+      )}
+      <div className={`flex gap-0.5 p-0.5 rounded-lg mb-3 ${x ? "bg-[#120A20]/60" : "bg-[#0F1F0F]/60"}`}>
         {(["top", "best"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`flex-1 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
               tab === t
-                ? "bg-[#5BA829] text-white"
-                : "text-green-200/35 hover:text-green-200/50"
+                ? x ? "bg-purple-600 text-white" : "bg-[#5BA829] text-white"
+                : x ? "text-purple-200/35 hover:text-purple-200/50" : "text-green-200/35 hover:text-green-200/50"
             }`}
           >
             {t === "top" ? "Top Scores" : "Personal Best"}
           </button>
         ))}
       </div>
-      <LeaderboardList entries={entries} empty={tab === "top" ? "No scores yet" : "No bests yet"} />
+      <LeaderboardList entries={entries} empty={tab === "top" ? "No scores yet" : "No bests yet"} xMode={xMode} />
     </section>
   );
 }
 
 /* ── Leaderboard List ─────────────────────────────────── */
-function LeaderboardList({ entries, empty }: { entries: Entry[]; empty: string }) {
+function LeaderboardList({ entries, empty, xMode }: { entries: Entry[]; empty: string; xMode: boolean }) {
+  const x = xMode;
   if (!entries.length) {
-    return <p className="text-green-200/20 text-[13px] text-center py-4">{empty}</p>;
+    return <p className={`text-[13px] text-center py-4 ${x ? "text-purple-200/20" : "text-green-200/20"}`}>{empty}</p>;
   }
   return (
     <ol className="space-y-1">
@@ -248,24 +269,34 @@ function LeaderboardList({ entries, empty }: { entries: Entry[]; empty: string }
         <li
           key={`${e.username}-${e.score}-${i}`}
           className={`flex items-center justify-between text-[13px] font-semibold rounded-lg px-3 py-2 ${
-            i === 0
-              ? "bg-yellow-400/10 text-yellow-200"
-              : i === 1
-                ? "bg-gray-300/8 text-gray-300"
-                : i === 2
-                  ? "bg-amber-600/8 text-amber-300"
-                  : "bg-green-200/[0.04] text-green-100/50"
+            x
+              ? i === 0
+                ? "bg-purple-400/15 text-purple-200"
+                : i === 1
+                  ? "bg-purple-300/8 text-purple-300/80"
+                  : i === 2
+                    ? "bg-purple-400/6 text-purple-300/60"
+                    : "bg-purple-200/[0.04] text-purple-100/50"
+              : i === 0
+                ? "bg-yellow-400/10 text-yellow-200"
+                : i === 1
+                  ? "bg-gray-300/8 text-gray-300"
+                  : i === 2
+                    ? "bg-amber-600/8 text-amber-300"
+                    : "bg-green-200/[0.04] text-green-100/50"
           }`}
         >
           <span className="flex items-center gap-2 truncate">
             <span className={`w-5 text-center text-[11px] font-bold ${
-              i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : i === 2 ? "text-amber-500" : "text-green-200/20"
+              x
+                ? i === 0 ? "text-purple-300" : i === 1 ? "text-purple-400/70" : i === 2 ? "text-purple-500/60" : "text-purple-200/20"
+                : i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : i === 2 ? "text-amber-500" : "text-green-200/20"
             }`}>
               {i + 1}
             </span>
             <span className="truncate">{e.username}</span>
           </span>
-          <span className="text-green-400/90 font-bold tabular-nums ml-3">{e.score}</span>
+          <span className={`font-bold tabular-nums ml-3 ${x ? "text-purple-400/90" : "text-green-400/90"}`}>{e.score}</span>
         </li>
       ))}
     </ol>
